@@ -1,5 +1,5 @@
 import { render } from './render.js';
-import { loadThemes, applyTheme, getSavedLayout, applyLayout, assignHeadingIds, buildSidebar, initScrollSpy, buildToolbar } from './ui.js';
+import { loadThemes, applyTheme, getSavedLayout, applyLayout, assignHeadingIds, buildSidebar, initScrollSpy } from './ui.js';
 import { exportPDF, exportHTML } from './export.js';
 import baseCSS from './base.css';
 import katexCSS from 'katex/dist/katex.min.css';
@@ -61,21 +61,6 @@ import katexCSS from 'katex/dist/katex.min.css';
   rawPre.style.display = 'none';
   let isRaw = false;
 
-  // Build toolbar
-  const toolbar = buildToolbar({
-    onPDF() { exportPDF(contentDiv); },
-    onHTML() {
-      const embed = document.getElementById('md-embed-images').checked;
-      exportHTML(contentDiv, embed);
-    },
-    onRawToggle() {
-      isRaw = !isRaw;
-      contentDiv.style.display = isRaw ? 'none' : '';
-      rawPre.style.display = isRaw ? '' : 'none';
-      document.getElementById('md-raw-btn').textContent = isRaw ? 'Rendered' : 'Raw';
-    },
-  });
-
   // Assemble page
   if (sidebarResult) {
     document.body.appendChild(sidebarResult.sidebar);
@@ -86,7 +71,6 @@ import katexCSS from 'katex/dist/katex.min.css';
   }
   document.body.appendChild(contentDiv);
   document.body.appendChild(rawPre);
-  document.body.appendChild(toolbar);
 
   // Init scroll spy
   if (sidebarResult) {
@@ -103,6 +87,26 @@ import katexCSS from 'katex/dist/katex.min.css';
     if (changes.mdLayout) {
       Object.assign(layout, changes.mdLayout.newValue);
       applyLayout(layout);
+    }
+  });
+
+  // Handle actions dispatched from the extension popup
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!msg || !msg.action) return;
+    if (msg.action === 'exportPDF') {
+      exportPDF(contentDiv).then(() => sendResponse({ ok: true }));
+      return true;
+    }
+    if (msg.action === 'exportHTML') {
+      exportHTML(contentDiv, !!msg.embedImages).then(() => sendResponse({ ok: true }));
+      return true;
+    }
+    if (msg.action === 'toggleRaw') {
+      isRaw = !isRaw;
+      contentDiv.style.display = isRaw ? 'none' : '';
+      rawPre.style.display = isRaw ? '' : 'none';
+      sendResponse({ ok: true, raw: isRaw });
+      return;
     }
   });
 })();

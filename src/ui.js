@@ -204,33 +204,3 @@ export function initScrollSpy(contentEl, tocEl) {
   update();
 }
 
-// --- Toolbar ---
-
-export function buildToolbar(callbacks) {
-  const toolbar = document.createElement('div');
-  toolbar.id = 'md-toolbar';
-
-  const pdfBtn = makeBtn('PDF', callbacks.onPDF);
-  const htmlBtn = makeBtn('HTML', callbacks.onHTML);
-
-  const embedLabel = document.createElement('label');
-  embedLabel.id = 'md-embed-label';
-  const embedCheck = document.createElement('input');
-  embedCheck.type = 'checkbox';
-  embedCheck.id = 'md-embed-images';
-  embedLabel.appendChild(embedCheck);
-  embedLabel.appendChild(document.createTextNode(' Embed imgs'));
-
-  const rawBtn = makeBtn('Raw', callbacks.onRawToggle);
-  rawBtn.id = 'md-raw-btn';
-
-  toolbar.append(pdfBtn, htmlBtn, embedLabel, rawBtn);
-  return toolbar;
-}
-
-function makeBtn(text, onclick) {
-  const btn = document.createElement('button');
-  btn.textContent = text;
-  btn.addEventListener('click', onclick);
-  return btn;
-}

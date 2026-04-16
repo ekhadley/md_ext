@@ -59,3 +59,31 @@ h1 {
   font-size: 11px;
   opacity: 0.6;
 }
+
+.hint.error { color: #d66; opacity: 0.85; }
+
+hr {
+  border: none;
+  border-top: 1px solid #3a3a3a;
+  margin: 12px 0 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.actions button {
+  flex: 1;
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+.actions button:hover:not(:disabled) { background: #3a3a3a; }
+.actions button:disabled { opacity: 0.4; cursor: default; }
