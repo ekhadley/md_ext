@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Markdown Renderer",
+  "version": "1.0.0",
+  "description": "Renders local markdown files with themes, LaTeX, and export options",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["file:///*"],
+      "include_globs": ["*.md", "*.markdown"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["themes.json", "fonts/*"],
+      "matches": ["file:///*"]
+    }
+  ]
+}
