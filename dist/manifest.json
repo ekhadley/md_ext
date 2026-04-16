@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "Renders local markdown files with themes, LaTeX, and export options",
   "permissions": ["storage"],
+  "action": {
+    "default_title": "Markdown Renderer settings",
+    "default_popup": "popup.html"
+  },
   "content_scripts": [
     {
       "matches": ["file:///*"],

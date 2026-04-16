@@ -14,8 +14,18 @@ esbuild.buildSync({
   platform: 'browser',
 });
 
+esbuild.buildSync({
+  entryPoints: ['src/popup.js'],
+  bundle: true,
+  outfile: 'dist/popup.js',
+  format: 'iife',
+  platform: 'browser',
+});
+
 fs.copyFileSync('manifest.json', 'dist/manifest.json');
 fs.copyFileSync('themes.json', 'dist/themes.json');
+fs.copyFileSync('src/popup.html', 'dist/popup.html');
+fs.copyFileSync('src/popup.css', 'dist/popup.css');
 
 const katexFonts = path.join('node_modules', 'katex', 'dist', 'fonts');
 for (const f of fs.readdirSync(katexFonts)) {

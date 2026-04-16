@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Markdown Renderer Settings</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Markdown Renderer</h1>
+
+  <div class="row">
+    <label for="theme">Theme</label>
+    <select id="theme"></select>
+  </div>
+
+  <div class="row">
+    <label for="width">Width</label>
+    <input type="range" id="width" min="30" max="120">
+    <span id="width-value"></span>
+  </div>
+
+  <div class="row">
+    <label for="sidebar-width">Sidebar</label>
+    <input type="range" id="sidebar-width" min="160" max="600">
+    <span id="sidebar-width-value"></span>
+  </div>
+
+  <div class="row checkbox-row">
+    <label for="centered">Centered content</label>
+    <input type="checkbox" id="centered">
+  </div>
+
+  <p class="hint">Changes apply to open markdown tabs.</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
