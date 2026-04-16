@@ -1,5 +1,5 @@
 import { render } from './render.js';
-import { loadThemes, applyTheme, getSavedTheme, saveTheme, getSavedLayout, applyLayout, assignHeadingIds, buildSidebar, initScrollSpy, buildToolbar, buildSettingsPanel } from './ui.js';
+import { loadThemes, applyTheme, getSavedLayout, applyLayout, assignHeadingIds, buildSidebar, initScrollSpy, buildToolbar } from './ui.js';
 import { exportPDF, exportHTML } from './export.js';
 import baseCSS from './base.css';
 import katexCSS from 'katex/dist/katex.min.css';
@@ -40,7 +40,10 @@ import katexCSS from 'katex/dist/katex.min.css';
 
   // Load themes and apply saved theme
   const themes = await loadThemes();
-  const savedThemeId = await getSavedTheme();
+  const stored = await new Promise(resolve => {
+    chrome.storage.local.get('mdTheme', r => resolve(r));
+  });
+  const savedThemeId = stored.mdTheme;
   const themeId = themes[savedThemeId] ? savedThemeId : 'gruvbox-dark';
   applyTheme(themes[themeId]);
 
@@ -49,7 +52,7 @@ import katexCSS from 'katex/dist/katex.min.css';
   applyLayout(layout);
 
   // Build sidebar
-  const sidebarResult = buildSidebar(contentDiv);
+  const sidebarResult = buildSidebar(contentDiv, layout);
 
   // Raw view element
   const rawPre = document.createElement('pre');
@@ -59,12 +62,8 @@ import katexCSS from 'katex/dist/katex.min.css';
   let isRaw = false;
 
   // Build toolbar
-  const toolbar = buildToolbar(themes, themeId, {
-    onThemeChange(id) {
-      applyTheme(themes[id]);
-      saveTheme(id);
-    },
-    onPDF() { exportPDF(); },
+  const toolbar = buildToolbar({
+    onPDF() { exportPDF(contentDiv); },
     onHTML() {
       const embed = document.getElementById('md-embed-images').checked;
       exportHTML(contentDiv, embed);
@@ -80,6 +79,7 @@ import katexCSS from 'katex/dist/katex.min.css';
   // Assemble page
   if (sidebarResult) {
     document.body.appendChild(sidebarResult.sidebar);
+    document.body.appendChild(sidebarResult.resizer);
     document.body.appendChild(sidebarResult.toggleBtn);
   } else {
     document.body.classList.add('sidebar-collapsed');
@@ -87,10 +87,22 @@ import katexCSS from 'katex/dist/katex.min.css';
   document.body.appendChild(contentDiv);
   document.body.appendChild(rawPre);
   document.body.appendChild(toolbar);
-  document.body.appendChild(buildSettingsPanel(layout));
 
   // Init scroll spy
   if (sidebarResult) {
     initScrollSpy(contentDiv, sidebarResult.sidebar);
   }
+
+  // Live-apply changes from the popup
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (changes.mdTheme) {
+      const id = changes.mdTheme.newValue;
+      if (themes[id]) applyTheme(themes[id]);
+    }
+    if (changes.mdLayout) {
+      Object.assign(layout, changes.mdLayout.newValue);
+      applyLayout(layout);
+    }
+  });
 })();

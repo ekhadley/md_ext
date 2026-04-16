@@ -1,12 +1,37 @@
-export function exportPDF() {
-  document.body.classList.add('printing');
-  window.print();
-  // Restore after print dialog closes
-  const restore = () => {
-    document.body.classList.remove('printing');
-    window.removeEventListener('afterprint', restore);
-  };
-  window.addEventListener('afterprint', restore);
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+
+export async function exportPDF(contentEl) {
+  const filename = decodeURIComponent(location.pathname.split('/').pop()).replace(/\.(md|markdown)$/i, '');
+  const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
+
+  const canvas = await html2canvas(contentEl, {
+    scale: 2,
+    backgroundColor: bg,
+    useCORS: true,
+    logging: false,
+    windowWidth: contentEl.scrollWidth,
+  });
+
+  const pdf = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+  let remaining = imgHeight;
+  let position = 0;
+  pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+  remaining -= pageHeight;
+  while (remaining > 0) {
+    position -= pageHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    remaining -= pageHeight;
+  }
+
+  pdf.save(filename + '.pdf');
 }
 
 export async function exportHTML(contentEl, embedImages) {

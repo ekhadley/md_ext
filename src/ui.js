@@ -13,19 +13,9 @@ export function applyTheme(theme) {
   root.style.setProperty('--font', theme.font || "'JetBrains Mono', monospace");
 }
 
-export async function getSavedTheme() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('mdTheme', r => resolve(r.mdTheme || 'gruvbox-dark'));
-  });
-}
-
-export function saveTheme(id) {
-  chrome.storage.local.set({ mdTheme: id });
-}
-
 // --- Layout settings ---
 
-const LAYOUT_DEFAULTS = { contentWidth: 52, centered: false };
+const LAYOUT_DEFAULTS = { contentWidth: 52, centered: false, sidebarWidth: 260 };
 
 export async function getSavedLayout() {
   return new Promise(resolve => {
@@ -35,10 +25,11 @@ export async function getSavedLayout() {
 
 export function applyLayout(layout) {
   document.documentElement.style.setProperty('--content-width', layout.contentWidth + 'rem');
+  document.documentElement.style.setProperty('--sidebar-width', layout.sidebarWidth + 'px');
   document.body.classList.toggle('content-centered', layout.centered);
 }
 
-function saveLayout(layout) {
+export function saveLayout(layout) {
   chrome.storage.local.set({ mdLayout: layout });
 }
 
@@ -58,7 +49,7 @@ export function assignHeadingIds(container) {
   });
 }
 
-export function buildSidebar(contentEl) {
+export function buildSidebar(contentEl, layout) {
   const headings = [...contentEl.querySelectorAll('h1, h2, h3, h4, h5, h6')];
   if (!headings.length) return null;
 
@@ -75,13 +66,52 @@ export function buildSidebar(contentEl) {
   toc.appendChild(buildNestedList(headings));
   sidebar.appendChild(toc);
 
+  const resizer = document.createElement('div');
+  resizer.id = 'md-sidebar-resizer';
+  attachResizer(resizer, sidebar, layout);
+
   const toggleBtn = document.createElement('button');
   toggleBtn.id = 'md-sidebar-toggle';
   toggleBtn.innerHTML = '&#9776;';
   toggleBtn.title = 'Toggle outline';
   toggleBtn.addEventListener('click', () => document.body.classList.toggle('sidebar-collapsed'));
 
-  return { sidebar, toggleBtn };
+  return { sidebar, resizer, toggleBtn };
+}
+
+function attachResizer(handle, sidebar, layout) {
+  const MIN = 160;
+  const MAX = 600;
+  let startX = 0;
+  let startWidth = 0;
+  let dragging = false;
+
+  const onMove = (e) => {
+    if (!dragging) return;
+    const delta = e.clientX - startX;
+    const newWidth = Math.max(MIN, Math.min(MAX, startWidth + delta));
+    layout.sidebarWidth = newWidth;
+    applyLayout(layout);
+  };
+
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove('md-resizing');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    saveLayout(layout);
+  };
+
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    dragging = true;
+    startX = e.clientX;
+    startWidth = sidebar.getBoundingClientRect().width;
+    document.body.classList.add('md-resizing');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
 function buildNestedList(headings) {
@@ -176,29 +206,13 @@ export function initScrollSpy(contentEl, tocEl) {
 
 // --- Toolbar ---
 
-export function buildToolbar(themes, currentThemeId, callbacks) {
+export function buildToolbar(callbacks) {
   const toolbar = document.createElement('div');
   toolbar.id = 'md-toolbar';
 
-  // Theme dropdown
-  const select = document.createElement('select');
-  select.id = 'md-theme-select';
-  for (const [id, theme] of Object.entries(themes)) {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = theme.name;
-    if (id === currentThemeId) opt.selected = true;
-    select.appendChild(opt);
-  }
-  select.addEventListener('change', () => callbacks.onThemeChange(select.value));
-
-  // PDF button
   const pdfBtn = makeBtn('PDF', callbacks.onPDF);
-
-  // HTML button
   const htmlBtn = makeBtn('HTML', callbacks.onHTML);
 
-  // Embed images checkbox
   const embedLabel = document.createElement('label');
   embedLabel.id = 'md-embed-label';
   const embedCheck = document.createElement('input');
@@ -207,71 +221,11 @@ export function buildToolbar(themes, currentThemeId, callbacks) {
   embedLabel.appendChild(embedCheck);
   embedLabel.appendChild(document.createTextNode(' Embed imgs'));
 
-  // Raw/rendered toggle
   const rawBtn = makeBtn('Raw', callbacks.onRawToggle);
   rawBtn.id = 'md-raw-btn';
 
-  // Settings button -> opens layout panel
-  const settingsBtn = makeBtn('Settings', () => {
-    document.getElementById('md-settings-panel').classList.toggle('hidden');
-  });
-  settingsBtn.id = 'md-settings-btn';
-
-  toolbar.append(select, pdfBtn, htmlBtn, embedLabel, rawBtn, settingsBtn);
+  toolbar.append(pdfBtn, htmlBtn, embedLabel, rawBtn);
   return toolbar;
-}
-
-export function buildSettingsPanel(layout) {
-  const panel = document.createElement('div');
-  panel.id = 'md-settings-panel';
-  panel.className = 'hidden';
-
-  // Width slider
-  const widthRow = document.createElement('div');
-  widthRow.className = 'settings-row';
-  const widthLabel = document.createElement('label');
-  widthLabel.textContent = 'Width';
-  const widthValue = document.createElement('span');
-  widthValue.className = 'settings-value';
-  widthValue.textContent = layout.contentWidth + 'rem';
-  const widthSlider = document.createElement('input');
-  widthSlider.type = 'range';
-  widthSlider.min = '30';
-  widthSlider.max = '120';
-  widthSlider.value = layout.contentWidth;
-  widthSlider.addEventListener('input', () => {
-    layout.contentWidth = parseInt(widthSlider.value);
-    widthValue.textContent = layout.contentWidth + 'rem';
-    applyLayout(layout);
-    saveLayout(layout);
-  });
-  widthRow.append(widthLabel, widthSlider, widthValue);
-
-  // Center toggle
-  const centerRow = document.createElement('div');
-  centerRow.className = 'settings-row';
-  const centerLabel = document.createElement('label');
-  centerLabel.textContent = 'Centered';
-  const centerToggle = document.createElement('input');
-  centerToggle.type = 'checkbox';
-  centerToggle.checked = layout.centered;
-  centerToggle.addEventListener('change', () => {
-    layout.centered = centerToggle.checked;
-    applyLayout(layout);
-    saveLayout(layout);
-  });
-  centerRow.append(centerLabel, centerToggle);
-
-  panel.append(widthRow, centerRow);
-
-  // Close on outside click
-  document.addEventListener('click', (e) => {
-    if (!panel.contains(e.target) && e.target.id !== 'md-settings-btn') {
-      panel.classList.add('hidden');
-    }
-  });
-
-  return panel;
 }
 
 function makeBtn(text, onclick) {
