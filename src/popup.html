@@ -30,8 +30,22 @@
     <input type="checkbox" id="centered">
   </div>
 
-  <p class="hint">Changes apply to open markdown tabs.</p>
+  <hr>
+
+  <div class="actions">
+    <button id="pdf-btn">Export PDF</button>
+    <button id="html-btn">Export HTML</button>
+    <button id="raw-btn">Toggle raw</button>
+  </div>
+
+  <div class="row checkbox-row">
+    <label for="embed-images">Embed images in HTML</label>
+    <input type="checkbox" id="embed-images">
+  </div>
+
+  <p class="hint" id="hint">Changes apply to open markdown tabs.</p>
 
   <script src="popup.js"></script>
 </body>
 </html>
+

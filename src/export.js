@@ -70,7 +70,7 @@ export async function exportHTML(contentEl, embedImages) {
 <style>
 :root { ${rootStyle} }
 ${cssText}
-#md-sidebar, #md-toolbar, #md-sidebar-toggle, #md-raw { display: none !important; }
+#md-sidebar, #md-sidebar-toggle, #md-sidebar-resizer, #md-raw { display: none !important; }
 #md-content { margin-left: 0; max-width: 100%; }
 </style>
 </head>

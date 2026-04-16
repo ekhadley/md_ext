@@ -47477,29 +47477,6 @@
     window.addEventListener("scroll", update, { passive: true });
     update();
   }
-  function buildToolbar(callbacks) {
-    const toolbar = document.createElement("div");
-    toolbar.id = "md-toolbar";
-    const pdfBtn = makeBtn("PDF", callbacks.onPDF);
-    const htmlBtn = makeBtn("HTML", callbacks.onHTML);
-    const embedLabel = document.createElement("label");
-    embedLabel.id = "md-embed-label";
-    const embedCheck = document.createElement("input");
-    embedCheck.type = "checkbox";
-    embedCheck.id = "md-embed-images";
-    embedLabel.appendChild(embedCheck);
-    embedLabel.appendChild(document.createTextNode(" Embed imgs"));
-    const rawBtn = makeBtn("Raw", callbacks.onRawToggle);
-    rawBtn.id = "md-raw-btn";
-    toolbar.append(pdfBtn, htmlBtn, embedLabel, rawBtn);
-    return toolbar;
-  }
-  function makeBtn(text4, onclick) {
-    const btn = document.createElement("button");
-    btn.textContent = text4;
-    btn.addEventListener("click", onclick);
-    return btn;
-  }
 
   // node_modules/jspdf/dist/jspdf.es.min.js
   init_typeof();
@@ -61010,7 +60987,7 @@
 <style>
 :root { ${rootStyle} }
 ${cssText}
-#md-sidebar, #md-toolbar, #md-sidebar-toggle, #md-raw { display: none !important; }
+#md-sidebar, #md-sidebar-toggle, #md-sidebar-resizer, #md-raw { display: none !important; }
 #md-content { margin-left: 0; max-width: 100%; }
 </style>
 </head>
@@ -61160,45 +61137,6 @@ body.sidebar-collapsed #md-sidebar-toggle { left: 6px; transition: left 0.2s eas
 }
 body.content-centered #md-content { margin: 0 auto; }
 
-/* --- Toolbar --- */
-#md-toolbar {
-  position: fixed;
-  top: 10px; right: 10px;
-  z-index: 101;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: stretch;
-  background: var(--toolbar-bg);
-  padding: 6px;
-  border-radius: 6px;
-  border: 1px solid var(--hr);
-  font-size: 0.8rem;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-}
-#md-toolbar:hover { opacity: 1; }
-
-#md-toolbar button, #md-toolbar select {
-  background: var(--bg);
-  color: var(--fg);
-  border: 1px solid var(--hr);
-  border-radius: 4px;
-  padding: 3px 8px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: inherit;
-}
-#md-toolbar button:hover, #md-toolbar select:hover { background: var(--selection); }
-
-#md-embed-label {
-  color: var(--toolbar-fg);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-}
-
 /* --- Typography --- */
 #md-content h1, #md-content h2, #md-content h3, #md-content h4, #md-content h5, #md-content h6 {
   color: var(--heading);
@@ -61305,7 +61243,7 @@ body.content-centered #md-content { margin: 0 auto; }
 
 /* --- Print --- */
 @media print {
-  #md-sidebar, #md-toolbar, #md-sidebar-toggle { display: none !important; }
+  #md-sidebar, #md-sidebar-toggle, #md-sidebar-resizer { display: none !important; }
   #md-content, #md-raw { margin-left: 0 !important; padding: 0 !important; max-width: 100% !important; }
   body#md-renderer { background: var(--bg) !important; }
 }
@@ -61354,21 +61292,6 @@ body.content-centered #md-content { margin: 0 auto; }
     rawPre.textContent = rawText;
     rawPre.style.display = "none";
     let isRaw = false;
-    const toolbar = buildToolbar({
-      onPDF() {
-        exportPDF(contentDiv);
-      },
-      onHTML() {
-        const embed = document.getElementById("md-embed-images").checked;
-        exportHTML(contentDiv, embed);
-      },
-      onRawToggle() {
-        isRaw = !isRaw;
-        contentDiv.style.display = isRaw ? "none" : "";
-        rawPre.style.display = isRaw ? "" : "none";
-        document.getElementById("md-raw-btn").textContent = isRaw ? "Rendered" : "Raw";
-      }
-    });
     if (sidebarResult) {
       document.body.appendChild(sidebarResult.sidebar);
       document.body.appendChild(sidebarResult.resizer);
@@ -61378,7 +61301,6 @@ body.content-centered #md-content { margin: 0 auto; }
     }
     document.body.appendChild(contentDiv);
     document.body.appendChild(rawPre);
-    document.body.appendChild(toolbar);
     if (sidebarResult) {
       initScrollSpy(contentDiv, sidebarResult.sidebar);
     }
@@ -61391,6 +61313,24 @@ body.content-centered #md-content { margin: 0 auto; }
       if (changes.mdLayout) {
         Object.assign(layout, changes.mdLayout.newValue);
         applyLayout(layout);
+      }
+    });
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (!msg || !msg.action) return;
+      if (msg.action === "exportPDF") {
+        exportPDF(contentDiv).then(() => sendResponse({ ok: true }));
+        return true;
+      }
+      if (msg.action === "exportHTML") {
+        exportHTML(contentDiv, !!msg.embedImages).then(() => sendResponse({ ok: true }));
+        return true;
+      }
+      if (msg.action === "toggleRaw") {
+        isRaw = !isRaw;
+        contentDiv.style.display = isRaw ? "none" : "";
+        rawPre.style.display = isRaw ? "" : "none";
+        sendResponse({ ok: true, raw: isRaw });
+        return;
       }
     });
   })();
